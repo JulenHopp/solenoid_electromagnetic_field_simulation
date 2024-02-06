@@ -1,176 +1,170 @@
-clear;
 clc;
+clear;
 
-% ============CREANDO UNA MALLA DE PUNTOS============
+%==========Definiendo atributos anillo magnetico==============
 
-N = 40;% Determinando cuantos intervalos van a haber en la malla
+ElementosAnillo = 200;%Numero de elementos de anillo que vamos a usar para los calculos
 
-minX = -10;%determinando los valores del rango que vamos a usar
-minY = -10;
+radio = 10;%radio del anillo
+corriente = 10;%Corriente del anillo
 
-maxX = 10;
-maxY = 10;
+numeroEspigas = 20;
+separacionEntreEspigas = 1;%Separacion entre espigas de la bobina
 
-x = linspace(minX, maxX,N);% Creando vector con los valores en x
-y = linspace(minY,maxY,N);% Creando el vector con los valores en y
+longuitudBobina = numeroEspigas * separacionEntreEspigas;%no  editar
 
-[xM,yM] = meshgrid(x,y);% Creando la malla de puntos
+% Estas son otras dormas de ingresar los datos del selenoide
 
-% ============CREANDO LOS CABLES CARGADOS============
+% longuitudBobina = 20;%Que tan grande va a ser la bobina
+% separacionEntreEspigas = 1;%Separacion entre espigas de la bobina
 
-%PRIMER CABLE
-cargaP1 = -3;% carga de particula
-longuitudP1 = 4;
-xP1 = 2; % coordenada en x
+% longuitudBobina = 20;%Que tan grande va a ser la bobina
+% numeroEspigas = 20;
+% separacionEntreEspigas = longuitudBobina / numeroEspigas;
 
-% SEGUNDA PARTICULA
-cargaP2 = 3;% carga de particula
-longuitudP2 = 6;
-xP2 = -2; % coordenada en x
+%================================================
+%================================================
+%=========== CALCULANDO CAMPO EN 3D =============
+%================================================
+%================================================
 
-% ============CALCULADO EL CAMPO============
+%=========GENERANDO MALLA DE PUNTOS============
 
-% CONSTANTES
+numeroDePuntosEntreEjes = 8;%Numero de puentos entre los limites
 
-kC = 8.9876e9;% constante de coulum
-dy = 0.1;% El cambio en posicion en y por iteracon
+dimensionesMalla = 20;% tamaño de la malla en xyz y -xyz
 
-% FUERZA EJERCIDA POR LA PRIMERA CARGA LINEAL
+x = linspace(-dimensionesMalla,dimensionesMalla,numeroDePuntosEntreEjes);%Creandolosvalores
+y = linspace(-dimensionesMalla,dimensionesMalla,numeroDePuntosEntreEjes);%en x,y,z
+z = linspace(-dimensionesMalla,dimensionesMalla,numeroDePuntosEntreEjes);
 
-exfinalP1 = 0;% Inicializando variables, que contendran los resultados
-eyfinalP1 = 0;
-vP1 = 0;
-alturaP1 = -(longuitudP1/2);% Inicializando la posicion inicial para realilos calculos
-while alturaP1 <= longuitudP1/2
-    
-    Rx1 = xM - xP1;% Calculando la distancia del punto en particular con la particula en cada coordenada
-    Ry1 = yM - alturaP1;
-    R1 = sqrt(Rx1.^2 + Ry1.^2);% calculando la magnitud de la distancia entre cada punto de la malla y la carga puntual.
+[mX,mY,mZ] = meshgrid(x,y,z);%Creando la malla de puntos
+
+%============Calculando el anillo==================
+
+theta = linspace(0,2*pi,ElementosAnillo);%Definiendo el rango de tetha
+
+%============Calulando el campo magnetico en 3d===========
+
+Bx = zeros(numeroDePuntosEntreEjes, numeroDePuntosEntreEjes);%Inicializando las componentes del campo magnetico
+By = zeros(numeroDePuntosEntreEjes, numeroDePuntosEntreEjes);
+Bz = zeros(numeroDePuntosEntreEjes, numeroDePuntosEntreEjes);
+
+altura = -longuitudBobina/2;
+while altura <= longuitudBobina/2
+
+    espaciado = altura;
+    for i = theta
         
-    Ex1 = (kC .* cargaP1  ./ R1.^3) .* Rx1; %Usando la formula de carga puntual.
-    Ey1 = (kC .* cargaP1  ./ R1.^3) .* Ry1;
+        rX = mX - radio*cos(i);%Calculando las distancias entre cada punto 
+        rY = mY - radio*sin(i);%de la malla con el anillo
+        rZ = mZ - espaciado;
+        R = sqrt(rX.^2 + rY.^2 + rZ.^2);%Magnitud de la distancia
         
-    V1 = (kC.*cargaP1)./R1;% Calculando el campo potencial
-    vP1 = vP1 + V1;% Sumando el los valores del campo potencial generados por la iteracion pasada
+        dx = -radio * sin(i);%calculando los diferenciales de corriente
+        dy = radio * cos(i);
     
-    
-    exfinalP1 = exfinalP1 + Ex1;% Sumando el campo actual el resultado de la carga que se acaba de calular
-    eyfinalP1 = eyfinalP1 + Ey1;
+        Bx = Bx + dy*rZ./R.^3;%Calulando las componenetes
+        By = By + dx* rZ./ R.^3;
+        Bz = Bz + ((dx.*rY) - (dy.*rX)) ./ R.^3;
+        
+        espaciado = altura + separacionEntreEspigas/ElementosAnillo;
+    end
 
-    alturaP1 = alturaP1 + dy;% Cambiando a la siguiente posicion en la cual se realizaran los calculos
+    altura = altura + separacionEntreEspigas;
 end
 
-% FUERZA EJERCIDA POR LA SEGUNDA CARGA LINEAL
-exfinalP2 = 0;% Inicializando variables, que contendran los resultados
-eyfinalP2 = 0;
-vP2 = 0;
-alturaP2 = -(longuitudP2/2);% Inicializando la posicion inicial para realilos calculos
-while alturaP2 <= longuitudP2/2
-    
-    Rx2 = xM - xP2;% Calculando la distancia del punto en particular con la particula en cada coordenada
-    Ry2 = yM - alturaP2;
-    R2 = sqrt(Rx2.^2 + Ry2.^2);% calculando la magnitud de la distancia entre cada punto de la malla y la carga puntual.
-        
-    Ex2 = (kC .* cargaP2 ./ R2.^3) .* Rx2; %Usando la formula de carga puntual.
-    Ey2 = (kC .* cargaP2 ./ R2.^3) .* Ry2;
-        
-    V2 = (kC.*cargaP2)./R2;% Calculando el campo potencia
-    vP2 = vP2 + V2;% Sumando el los valores del campo potencial generados por la iteracion pasada
-    
- 
-    exfinalP2 = exfinalP2 + Ex2;% Sumando el campo actual el resultado de la carga que se acaba de calular
-    eyfinalP2 = eyfinalP2 + Ey2;
+Tau = ((4 * pi * (10^-7)) * corriente)/(4*pi);%Juntando parte de la formula
+                                              %de bio savart
+Bx = Tau .* Bx;%Multiplicando las componente por lo que faltaba 
+By = -Tau .* By;
+Bz = Tau .* Bz;
+magnitudB = sqrt(Bx.^2 + By.^2 + Bz.^2);%Calculando magnitud del campo
 
-    alturaP2 = alturaP2 + dy% Cambiando a la siguiente posicion en la cual se realizaran los calculos
+% =============Graficando el cmapo magnetico==============
+
+figure(1);
+clf;
+
+%Graficando el campo magnetico
+quiver3(mX, mY,mZ, Bx./magnitudB, By./magnitudB, Bz./magnitudB,'LineWidth',0.7,'AutoScaleFactor',0.7);
+hold on
+
+%graficando el selenoide
+altura = -longuitudBobina/2;
+while altura < longuitudBobina/2
+    plot3(radio*cos(theta),radio*sin(theta),linspace(altura,altura + separacionEntreEspigas,ElementosAnillo),'Color','red')
+
+    altura = altura + separacionEntreEspigas;
 end
 
-% ASIGNADO VALORES A LAS COMPONENTES
-u = exfinalP1 + exfinalP2;% Asignadoles valores a las componentes de cada coordenada
-v = eyfinalP1 + eyfinalP2;
+%================================================
+%================================================
+%=========== CALCULANDO CAMPO EN 2D =============
+%================================================
+%================================================
 
-Emfinal = sqrt(u.^2 + v.^2);% Calculando el modulo de las componenste
+%Se utilizo un proceso similar al 3d unicamente que se sustituyo el campo
+%en x por 0
 
-uUnitario = u./Emfinal;% Crenado vectores unitarios
-vUnitario = v./Emfinal;
+numeroDePuntosEntreEjes = 20;%Numero de puentos entre los limites
+dimensionesMalla = 20;% tamaño de la malla en xyz y -xyz
+y = linspace(-dimensionesMalla,dimensionesMalla,numeroDePuntosEntreEjes);
+z = linspace(-dimensionesMalla,dimensionesMalla,numeroDePuntosEntreEjes);
+[mY,mZ] = meshgrid(y,z);%Creando la malla de puntos
 
-Vfinal = vP1 + vP2;% Juntando los valores de los campos potenciales generados por cada carga
+Bx = zeros(0,0);
+By = zeros(numeroDePuntosEntreEjes, numeroDePuntosEntreEjes);
+Bz = zeros(numeroDePuntosEntreEjes, numeroDePuntosEntreEjes);
 
-% ============GRAFICANDO============
+altura = -longuitudBobina/2;
+while altura <= longuitudBobina/2
 
-% GRAFICO REAL
-figure(1);% Creando una ventana para desplegar el grafico
-graficoReal = quiver(xM,yM,u,v,'autoscalefactor',1.2);% Generando el grafico vectorial
-set(graficoReal,'Color','blue','linewidth',1.2)% Ajustando atributos del grafico
-axis([minX maxX minY maxY]);% Ajustando los limites del grafico
+    espaciado = altura;
+    for i = theta
     
-    %Graficando las 2 cargas lineales, con un operador booleano el cual
-    %cheque el signo de la carga y decida de que color va a graficar.
-    if cargaP1 >= 0
-        graficoReal = rectangle('position',[xP1-0.2, 0-longuitudP1/2,...
-            0.4, longuitudP1],'FaceColor','red');
-    else
-        graficoReal = rectangle('position',[xP1-0.2, 0-longuitudP1/2,...
-                    0.4,longuitudP1],'FaceColor','blue');
+        rX = -radio*cos(i);
+        rY = mY - radio*sin(i);
+        rZ = mZ - espaciado;
+        R = sqrt(rX.^2 + rY.^2 + rZ.^2); 
+    
+        dx = -radio * sin(i);
+        dy = radio * cos(i);
+    
+        
+        By = By + dx* rZ./ R.^3;
+        Bz = Bz + ((dx*rY) - (dy*rX)) ./ R.^3;
+    
+        espaciado = altura + separacionEntreEspigas/ElementosAnillo;
     end
 
-    if cargaP2 >= 0
-        graficoReal = rectangle('position',[xP2-0.2, 0-longuitudP2/2,...
-        0.4, longuitudP2],'FaceColor','red');
-    else
-        graficoReal = rectangle('position',[xP2-0.2, 0-longuitudP2/2,...
-                    0.4,longuitudP2],'FaceColor','blue');
-    end
+    altura = altura + separacionEntreEspigas;
+end
+Tau = ((4 * pi * (10^-7)) * corriente)/(4*pi);
 
-% GRAFICO UTILIZANDO VECTORES UNITARIOS
-figure(2);% Creando una ventana para desplegar el grafico
-graficoUnitario = quiver(xM,yM,uUnitario,vUnitario,'autoscalefactor',0.9);% Generando el grafico vectorial
-set(graficoUnitario,'Color','blue','linewidth',1)%Ajustando atributos del grafico
-axis([minX maxX minY maxY]);% Ajustando los limites del grafico
+By = -Tau .* By;
+Bz = Tau .* Bz;
+magnitudB = sqrt(By.^2 + Bz.^2);
 
-    %Graficando las 2 cargas lineales, con un operador booleano el cual
-    %cheque el signo de la carga y decida de que color va a graficar.
-    if cargaP1 >= 0
-        graficoUnitario = rectangle('position',[xP1-0.2, 0-longuitudP1/2,...
-            0.4, longuitudP1],'FaceColor','red');
-    else
-        graficoUnitario = rectangle('position',[xP1-0.2, 0-longuitudP1/2,...
-                    0.4,longuitudP1],'FaceColor','blue');
-    end
+figure(2)
+clf;
 
-    if cargaP2 >= 0
-        graficoUnitario = rectangle('position',[xP2-0.2, 0-longuitudP2/2,...
-        0.4, longuitudP2],'FaceColor','red');
-    else
-        graficoUnitario = rectangle('position',[xP2-0.2, 0-longuitudP2/2,...
-                    0.4,longuitudP2],'FaceColor','blue');
-    end
-
-% Grafico campo potencial
-figure(3);% Creando una nueva ventana para generar el grafico
-graficoCampo = surf(xM,yM,Vfinal);% Creando el grafico vectorial
-
-% Grafico campo magnetico con su potencial
-figure(4)
-Vfinal = abs(vP1) + (vP2);% Juntando los valores de los campos potenciales generados por cada carga
-
-[c,h] = contourf(xM,yM,Vfinal,50,'LineStyle','none');
-colormap("turbo")
-h.FaceAlpha = 0.6; 
+[c,h] = contourf(mY,mZ,magnitudB,500,'LineStyle','none');
+colormap("jet")
+h.FaceAlpha = 0.67; 
 colorbar
 hold on
-graficoReal = quiver(xM,yM,uUnitario,vUnitario, "color","blue",'LineWidth',0.4);% Generando el grafico vectorial
-    if cargaP1 >= 0
-        graficoUnitario = rectangle('position',[xP1-0.2, 0-longuitudP1/2,...
-            0.4, longuitudP1],'FaceColor','red');
-    else
-        graficoUnitario = rectangle('position',[xP1-0.2, 0-longuitudP1/2,...
-                    0.4,longuitudP1],'FaceColor','blue');
-    end
 
-    if cargaP2 >= 0
-        graficoUnitario = rectangle('position',[xP2-0.2, 0-longuitudP2/2,...
-        0.4, longuitudP2],'FaceColor','red');
-    else
-        graficoUnitario = rectangle('position',[xP2-0.2, 0-longuitudP2/2,...
-                    0.4,longuitudP2],'FaceColor','blue');
-    end
+quiver(mY,mZ,By./magnitudB,Bz./magnitudB,'Color','black','AutoScaleFactor',0.9)
+
+%graficando el selenoide
+altura = -longuitudBobina/2;
+while altura < longuitudBobina/2
+    plot(radio*sin(theta),linspace(altura,altura + separacionEntreEspigas,ElementosAnillo),'Color','#0000FF','LineWidth',0.8)
+
+    altura = altura + separacionEntreEspigas;
+end
+
+axis([-dimensionesMalla dimensionesMalla -dimensionesMalla....
+    dimensionesMalla]);% Ajustando los limites del grafico
+hold off
